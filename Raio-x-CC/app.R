@@ -1,5 +1,6 @@
 library(shinydashboard)
 library(shinyjs)
+source("processa_dados.R")
 
 # Define UI for application that draws a histogram
 
@@ -12,9 +13,10 @@ ui <- dashboardPage(
                 menuItem("Tab2", tabName = "tab2", icon = icon("bookmark")),
                 sliderInput("bins",
                             "Number of bins:",
-                            min = 1,
-                            max = 50,
-                            value = 30)
+                            min = 1980,
+                            max = 2017,
+                            value = c(10,30),
+                            step = 0.5)
     )
   ),
   dashboardBody(
@@ -37,8 +39,6 @@ ui <- dashboardPage(
 )
 
 
-
-
 # Define server logic required to draw a histogram
 server <- function(input, output) {
    
@@ -54,4 +54,3 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
