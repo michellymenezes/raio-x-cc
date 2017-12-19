@@ -3,8 +3,6 @@ library(shinyjs)
 source("processa_dados.R")
 library(readr)
 
-# Define UI for application that draws a histogram
-
 ui <- dashboardPage(
   dashboardHeader(title = "Raio-x CC"),
   dashboardSidebar(
@@ -40,7 +38,6 @@ ui <- dashboardPage(
 )
 
 
-# Define server logic required to draw a histogram
 server <- function(input, output) {
    
    output$distPlot <- renderPlot({
@@ -53,5 +50,5 @@ server <- function(input, output) {
    })
 }
 
-# Run the application 
+
 shinyApp(ui = ui, server = server)
