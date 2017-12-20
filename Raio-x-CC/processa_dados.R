@@ -17,4 +17,6 @@ matriculas.turma = matriculas %>%
   group_by(PERIODO_MAT, MAT_TUR_DIS_DISCIPLINA, MAT_TUR_TURMA) %>%
   summarise(N = n())
 
-prerequisitos = prerequisitos %>% select(-PRD_DIC_CCU_CUR_COD_CURSO, -PRD_DIC_CCU_COD_CURRICULO)
+# Filtrando disciplinas por disciplinas ativas ou optativas
+disciplinas = disciplinas %>% 
+  filter(DIC_REGRA == 'Optativa' | (DIC_REGRA == 'Obrigatoria' & DIC_STATUS == 'A'))

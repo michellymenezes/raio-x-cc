@@ -4,4 +4,3 @@
 # * Possível selecionar mais de uma disciplina
 # * Cada barra é uma disciplina
 
-disciplinas.alunos_aptos = 
