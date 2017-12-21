@@ -2,7 +2,7 @@ library(shinydashboard)
 library(shinyjs)
 source("processa_dados.R")
 library(readr)
-library(ggplot2)
+library(plotly)
 
 
 matriculas = get_matriculas()
@@ -27,17 +27,16 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, selectInput('tab1_selectDisciplina', 'Estados', 
-                                                     choices = matriculas %>% 
-                                                       left_join(disciplinas, by = c("MAT_TUR_DIS_DISCIPLINA" = "DIS_DISCIPLINA")) %>%
-                                                       select(DIS_DESCRICAO) %>% distinct(), 
+                                                     choices = matriculas_nome %>%
+                                                       select(DIS_DESCRICAO) %>% distinct() %>% na.omit() %>% arrange(DIS_DESCRICAO), 
                                                      multiple=F, selectize=TRUE),
                            radioButtons(inputId = "tab1_tipoTurma", label = "Modo de exibição:",
-                                        choices = c("Por turma", "Agrupada"), selected = "Por turma"),
-                           verbatimTextOutput('summary')
+                                        choices = c("Por turma", "Agrupada"), selected = "Por turma")
+  #                         verbatimTextOutput('summary')
                            
                        )),
                 column(width = 8,
-                       box(width = NULL, plotOutput("n_matriculas_periodo")),
+                       box(width = NULL, plotlyOutput("n_matriculas_periodo")),
                        box(width = NULL,uiOutput('selectUI'),
                            sliderInput(inputId = "target", label = "Períodos:",
                                        min = 0, max = length(values$PERIODO_MAT) - 1,
@@ -62,13 +61,13 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  output$summary <- renderPrint({
-    print((input$target))
-    print(input$target + 1)
-    print((values[["PERIODO_MAT"]][input$target + 1])[1])
-    print((values[["PERIODO_MAT"]][input$target + 1])[2])
-    
-  })
+  # output$summary <- renderPrint({
+  #   print((input$target))
+  #   print(input$target + 1)
+  #   print((values[["PERIODO_MAT"]][input$target + 1])[1])
+  #   print((values[["PERIODO_MAT"]][input$target + 1])[2])
+  #   
+  # })
   
   output$selectUI <- renderUI({
     
@@ -93,21 +92,36 @@ server <- function(input, output, session) {
     )
   })
   
-  output$n_matriculas_periodo <- renderPlot({
+  output$n_matriculas_periodo <- renderPlotly({
     
     n_matriculas = matriculas_nome %>%
       filter(DIS_DESCRICAO == input$tab1_selectDisciplina &
                PERIODO_MAT >= ((values[["PERIODO_MAT"]][input$target + 1])[1]) &
-               PERIODO_MAT <= ((values[["PERIODO_MAT"]][input$target + 1])[2])) %>%
-      select(PERIODO_MAT, DIS_DESCRICAO) %>%
-      group_by(PERIODO_MAT, DIS_DESCRICAO) %>%
-      summarise(n = n())
+               PERIODO_MAT <= ((values[["PERIODO_MAT"]][input$target + 1])[2]))
     
-    ggplot(n_matriculas, aes(as.character(PERIODO_MAT), n)) + geom_point() + geom_line()
+    if(n_matriculas %>% nrow() > 0){
+    
+      if(input$tab1_tipoTurma == "Agrupada"){
+        n_matriculas = n_matriculas %>%
+          select(PERIODO_MAT, DIS_DESCRICAO) %>%
+          group_by(PERIODO_MAT, DIS_DESCRICAO) %>%
+          summarise(n = n())
+        
+       ggplotly(ggplot(n_matriculas %>% na.omit(), aes(as.character(PERIODO_MAT), n, group = DIS_DESCRICAO)) + geom_point() + geom_line())
+      }else{
+        n_matriculas = n_matriculas %>%
+          select(PERIODO_MAT, DIS_DESCRICAO, MAT_TUR_TURMA) %>%
+          group_by(PERIODO_MAT, DIS_DESCRICAO, MAT_TUR_TURMA) %>%
+          summarise(n = n())
+        
+        ggplotly(ggplot(n_matriculas %>% na.omit(), aes(x = as.character(PERIODO_MAT), y = n, group = MAT_TUR_TURMA, color = MAT_TUR_TURMA)) + 
+                   geom_point() + geom_line())
+      }
+    }else{
+      return(NULL)
+    }
+    
   })
-  
-  
 }
-
 
 shinyApp(ui = ui, server = server)
