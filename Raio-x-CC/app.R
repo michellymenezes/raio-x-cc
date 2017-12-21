@@ -3,13 +3,14 @@ library(shinyjs)
 source("processa_dados.R")
 library(readr)
 library(plotly)
+library(highcharter)
 
 
 matriculas = get_matriculas()
 diciplinas = get_disciplinas()
 matriculas_nome = matriculas %>% 
   left_join(disciplinas %>% select(DIS_DISCIPLINA, DIS_DESCRICAO), by = c("MAT_TUR_DIS_DISCIPLINA" = "DIS_DISCIPLINA"))
-values = list(PERIODO_MAT = (matriculas %>% select(PERIODO_MAT) %>% unique() %>% arrange(PERIODO_MAT))$PERIODO_MAT)
+values = list(PERIODO_MAT = (matriculas %>% select(PERIODO_MAT) %>% unique() %>% arrange(PERIODO_MAT))$PERIODO_MAT %>% na.omit())
 
 ui <- dashboardPage(
   dashboardHeader(title = "Raio-x CC"),
@@ -83,7 +84,7 @@ server <- function(input, output, session) {
                         {values:vals,
                         min: 0,
                         max: %s,
-                        from:%s})
+                        from:[0,%s]})
                         })
                         </script>
                         ', sel_values, 
@@ -104,18 +105,34 @@ server <- function(input, output, session) {
       if(input$tab1_tipoTurma == "Agrupada"){
         n_matriculas = n_matriculas %>%
           select(PERIODO_MAT, DIS_DESCRICAO) %>%
+          mutate(PERIODO_MAT = as.character(PERIODO_MAT)) %>%
           group_by(PERIODO_MAT, DIS_DESCRICAO) %>%
           summarise(n = n())
+        names(n_matriculas)[1:2] = c("Período", "Disciplina")
         
-       ggplotly(ggplot(n_matriculas %>% na.omit(), aes(as.character(PERIODO_MAT), n, group = DIS_DESCRICAO)) + geom_point() + geom_line())
+       g = ggplot(n_matriculas %>% na.omit(), aes(Período, n, group = Disciplina)) +
+         geom_point() +
+         geom_line() +
+         ggtitle("Número de matrículas realizadas por período") + 
+         theme(axis.text.x = element_text(angle = 45, hjust = 1))
+       
+       ggplotly(g, tooltip=c("x", "y"))
+       
       }else{
         n_matriculas = n_matriculas %>%
           select(PERIODO_MAT, DIS_DESCRICAO, MAT_TUR_TURMA) %>%
+          mutate(PERIODO_MAT = as.character(PERIODO_MAT)) %>%
           group_by(PERIODO_MAT, DIS_DESCRICAO, MAT_TUR_TURMA) %>%
           summarise(n = n())
+        names(n_matriculas)[1:3] = c("Período", "Disciplina", "Turma")
         
-        ggplotly(ggplot(n_matriculas %>% na.omit(), aes(x = as.character(PERIODO_MAT), y = n, group = MAT_TUR_TURMA, color = MAT_TUR_TURMA)) + 
-                   geom_point() + geom_line())
+        g = ggplot(n_matriculas %>% na.omit(), aes(x = Período, y = n, group = Turma, color = Turma)) +
+          geom_point() +
+          geom_line() + 
+          ggtitle("Número de matrículas realizadas por período") + 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+        ggplotly(g, tooltip=c("x", "y", "group"))
       }
     }else{
       return(NULL)
