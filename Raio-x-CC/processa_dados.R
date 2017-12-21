@@ -1,10 +1,10 @@
 library(readr)
 library(dplyr)
 
-disciplinas <- read_delim("dados/disciplinas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-matriculas <- read_delim("dados/matriculas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-turmas <- read_delim("dados/turmas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-prerequisitos <- read_delim("dados/prerequisitos.csv", ";", escape_double = FALSE, trim_ws = TRUE) 
+disciplinas <- read_delim("../dados/disciplinas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+matriculas <- read_delim("../dados/matriculas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+turmas <- read_delim("../dados/turmas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+prerequisitos <- read_delim("../dados/prerequisitos.csv", ";", escape_double = FALSE, trim_ws = TRUE) 
 
 # Limpando dados incorretos de matriculas e matricula do periodo que não acabou
 matriculas = matriculas %>%
@@ -20,3 +20,19 @@ matriculas.turma = matriculas %>%
 # Filtrando disciplinas por disciplinas ativas ou optativas
 disciplinas = disciplinas %>% 
   filter(DIC_REGRA == 'Optativa' | (DIC_REGRA == 'Obrigatoria' & DIC_STATUS == 'A'))
+
+get_matriculas = function(){
+  return(matriculas)
+}
+
+get_disciplinas = function(){
+  return(disciplinas)
+}
+
+get_turmas = function() {
+  return(turmas)
+}
+
+get_prerequisitos = function(){
+  return(prerequisitos)
+}
