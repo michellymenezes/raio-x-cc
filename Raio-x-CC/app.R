@@ -3,10 +3,12 @@ library(shinyjs)
 source("processa_dados.R")
 library(readr)
 library(ggplot2)
-
+library(highcharter)
+source("pergunta02.R")
 
 matriculas = get_matriculas()
 diciplinas = get_disciplinas()
+disciplinas_qnt_alunos_aptos = get_disciplinas_qnt_alunos_aptos()
 matriculas_nome = matriculas %>% 
   left_join(disciplinas %>% select(DIS_DISCIPLINA, DIS_DESCRICAO), by = c("MAT_TUR_DIS_DISCIPLINA" = "DIS_DISCIPLINA"))
 values = list(PERIODO_MAT = (matriculas %>% select(PERIODO_MAT) %>% unique() %>% arrange(PERIODO_MAT))$PERIODO_MAT)
@@ -51,13 +53,22 @@ ui <- dashboardPage(
       
       tabItem(tabName = "tab2",
               fluidRow(
-                
-              )
-              
+                column(width = 4,
+                       box(width = NULL, 
+                           selectInput("tab2_selectDisciplina", label = h3("Disciplinas"),
+                                       choices = unique(disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA), multiple=T
+                           )
+                       )
+                ),
+                column(width = 8,
+                       box(width = NULL, highchartOutput("n_alunos_aptos"))
+                )
+              ) 
       )
     )
   )
 )
+
 
 
 server <- function(input, output, session) {
@@ -104,6 +115,22 @@ server <- function(input, output, session) {
       summarise(n = n())
     
     ggplot(n_matriculas, aes(as.character(PERIODO_MAT), n)) + geom_point() + geom_line()
+  })
+  
+  output$n_alunos_aptos <- renderHighchart({
+    
+    
+    disciplinas_qnt_alunos_aptos = disciplinas_qnt_alunos_aptos %>%
+      filter(NOME_DISCIPLINA %in% input$tab2_selectDisciplina) %>%
+      reorder_by_qnt()
+    
+    highchart() %>% 
+      hc_chart(type = "column") %>% 
+      hc_title(text = "Alunos aptos a pagar disciplinas") %>% 
+      hc_subtitle(text = "(não cursou a disciplina, mas já cumpriu seus pré-requisitos") %>%
+      hc_xAxis(categories = disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA) %>% 
+      hc_add_series(data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_APTOS), 
+                    name = "Quantidade de alunos aptos a pagar",  color = "#B71C1C")
   })
   
   
