@@ -1,12 +1,12 @@
 library(readr)
 library(dplyr)
 
-disciplinas <- read_delim("../dados/disciplinas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-matriculas <- read_delim("../dados/matriculas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-turmas <- read_delim("../dados/turmas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
-prerequisitos_raw <- read_delim("../dados/prerequisitos_raw.csv", ";", escape_double = FALSE, trim_ws = TRUE) 
-disciplinas_qnt_alunos_aptos <- read_csv("../dados/disciplinas_qnt_alunos_aptos.csv")
-alunos <- read_delim("../dados/alunos.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+disciplinas <- read_delim("dados/disciplinas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+matriculas <- read_delim("dados/matriculas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+turmas <- read_delim("dados/turmas.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+prerequisitos_raw <- read_delim("dados/prerequisitos_raw.csv", ";", escape_double = FALSE, trim_ws = TRUE) 
+disciplinas_qnt_alunos_aptos <- read_csv("dados/disciplinas_qnt_alunos_aptos.csv")
+alunos <- read_delim("dados/alunos.csv", ";", escape_double = FALSE, trim_ws = TRUE)
 
 # Limpando dados incorretos de matriculas e matricula do periodo que não acabou
 matriculas = matriculas %>%
@@ -21,7 +21,7 @@ matriculas.turma = matriculas %>%
 
 # Filtrando disciplinas por disciplinas ativas ou optativas
 disciplinas = disciplinas %>% 
-  filter(DIC_REGRA == 'Optativa' | (DIC_REGRA == 'Obrigatoria' & DIC_STATUS == 'A'))
+  filter(DIC_REGRA == 'Optativa' | (DIC_REGRA == 'Obrigatoria' & DIC_STATUS == 'A') | (DIC_REGRA == 'Complementar'))
 
 #matriculas  = (alunos %>% select(ALU_MATRICULA)) %>% left_join(matriculas, by = c("ALU_MATRICULA" = "MAT_ALU_MATRICULA"))
 
