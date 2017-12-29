@@ -56,7 +56,8 @@ ui <- dashboardPage(
                 column(width = 4,
                        box(width = NULL, 
                            selectInput("tab2_selectDisciplina", label = h3("Disciplinas"),
-                                       choices = unique(disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA), multiple=T
+                                       choices = unique(disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA), multiple=T,
+                                       selected = c("LAB.DE ORG.E ARQUITETURA DE COMPUTADORES", "ORG.E ARQUITETURA DE COMPUTADORES I")
                            )
                        )
                 ),
@@ -151,21 +152,30 @@ server <- function(input, output, session) {
     
   })
 
-  
   output$n_alunos_aptos <- renderHighchart({
-    
     
     disciplinas_qnt_alunos_aptos = disciplinas_qnt_alunos_aptos %>%
       filter(NOME_DISCIPLINA %in% input$tab2_selectDisciplina) %>%
       reorder_by_qnt()
     
     highchart() %>% 
-      hc_chart(type = "column") %>% 
+      hc_chart(animation = FALSE) %>% 
       hc_title(text = "Alunos aptos a pagar disciplinas") %>% 
       hc_subtitle(text = "(não cursou a disciplina, mas já cumpriu seus pré-requisitos") %>%
       hc_xAxis(categories = disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA) %>% 
-      hc_add_series(data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_APTOS), 
-                    name = "Quantidade de alunos aptos a pagar",  color = "#B71C1C")
+      hc_plotOptions( column = list(stacking = "normal") ) %>% 
+      hc_add_series(
+        data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_APTOS), 
+        name = "Quantidade de alunos aptos a pagar",  
+        color = "#B71C1C",
+        type = "column"
+      ) %>% 
+      hc_add_series(
+        data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_PAGANDO), 
+        name = "Quantidade de alunos pagando",  
+        color = "#2980b9",
+        type = "column"
+      )
   })
   
 }
