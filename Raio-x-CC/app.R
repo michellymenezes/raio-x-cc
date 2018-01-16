@@ -132,7 +132,8 @@ server <- function(input, output, session) {
        #ggplotly(g, tooltip=c("x", "y"))
        highchart() %>%
          hc_xAxis(categories = n_matriculas$Período) %>% 
-       hc_add_series(n_matriculas %>% na.omit(), "line", hcaes(x = Período, y = n))
+       hc_add_series(n_matriculas %>% na.omit(), "line", hcaes(x = Período, y = n)) %>%
+         hc_title(text = "Número de matrículas por período")
        
        
       }else{
@@ -173,7 +174,7 @@ server <- function(input, output, session) {
         
       
         
-        # g = ggplot(n_matriculas %>% na.omit(), aes(x = Periodo, y = n, group = Turma, color = Turma)) +
+        # g = ggplot(n_matriculas %>% na.omit(), aes(x = Periodo, y = n, group = Turma, color = Turma)) + 
         #   geom_point() +
         #   geom_line() + 
         #   ggtitle("Número de matrículas realizadas por período") + 
@@ -181,7 +182,8 @@ server <- function(input, output, session) {
      
         # highchart() %>%
         #   hc_xAxis(categories = as.character(mat$Periodo %>% unique())) %>%
-        hchart(n_matriculas %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma))
+        hchart(n_matriculas %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma)) %>%
+          hc_title(text = "Número de matrículas por período")
         #   hc_add_series(mat %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma))
         
         #ggplotly(g, tooltip=c("x", "y", "group"))
