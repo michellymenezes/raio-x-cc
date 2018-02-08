@@ -6,6 +6,8 @@ library(ggplot2)
 library(highcharter)
 source("pergunta02.R")
 library(plotly)
+library(viridis)
+library(viridisLite)
 
 matriculas = get_matriculas()
 diciplinas = get_disciplinas()
@@ -190,9 +192,13 @@ server <- function(input, output, session) {
         #   ggtitle("Número de matrículas realizadas por período") + 
         #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
      
+        cols <- viridis(8)
+        cols <- substr(cols, 0, 7)
+        
         # highchart() %>%
         #   hc_xAxis(categories = as.character(mat$Periodo %>% unique())) %>%
         hchart(n_matriculas %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma)) %>%
+          hc_colors(cols) %>%
           hc_title(text = "Número de matrículas por período")
         #   hc_add_series(mat %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma))
         
