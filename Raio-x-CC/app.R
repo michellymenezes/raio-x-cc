@@ -20,7 +20,8 @@ ui <- dashboardPage(
     useShinyjs(),
     sidebarMenu(id = "menu",
                 menuItem("Tab1", tabName = "tab1", icon = icon("bookmark")),
-                menuItem("Tab2", tabName = "tab2", icon = icon("bookmark"))
+                menuItem("Tab2", tabName = "tab2", icon = icon("bookmark")),
+                menuItem("Tab3", tabName = "tab3", icon = icon("bookmark"))
     )
   ),
   dashboardBody(
@@ -28,32 +29,31 @@ ui <- dashboardPage(
     tabItems(
       tabItem(tabName = "tab1",
               fluidRow(
-                column(width = 4,
+                column(width = 3,
                        box(width = NULL, selectInput('tab1_selectDisciplina', 'Estados', 
                                                      choices = matriculas_nome %>%
                                                        select(DIS_DESCRICAO) %>% distinct() %>% na.omit() %>% arrange(DIS_DESCRICAO), 
                                                      multiple=F, selectize=TRUE),
                            radioButtons(inputId = "tab1_tipoTurma", label = "Modo de exibição:",
                                         choices = c("Por turma", "Agrupada"), selected = "Por turma")
-  #                         verbatimTextOutput('summary')
+                           #verbatimTextOutput('summary')
                            
                        )),
-                column(width = 8,
+                column(width = 7,
                        box(width = NULL, plotlyOutput("n_matriculas_periodo")),
                        box(width = NULL,uiOutput('selectUI'),
                            sliderInput(inputId = "target", label = "Períodos:",
                                        min = 0, max = length(values$PERIODO_MAT) - 1,
                                        step = 1, sep = "",
-                                       value = c(0,length(values$PERIODO_MAT) - 1)))
+                                       value = c(0, length(values$PERIODO_MAT) - 1)))
                 )
               )
-              
       ),
       
       
       tabItem(tabName = "tab2",
               fluidRow(
-                column(width = 4,
+                column(width = 3,
                        box(width = NULL, 
                            selectInput("tab2_selectDisciplina", label = h3("Disciplinas"),
                                        choices = unique(disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA), multiple=T,
@@ -61,11 +61,21 @@ ui <- dashboardPage(
                            )
                        )
                 ),
-                column(width = 8,
+                column(width = 7,
                        box(width = NULL, highchartOutput("n_alunos_aptos"))
                 )
               ) 
+      ),
+  
+      tabItem(tabName = "tab3",
+              fluidRow(
+                column(width = 3),
+                column(width = 7, 
+                       box(width = NULL, highchartOutput("matriculas_pelos_periodos"))
+                )
+              ) 
       )
+  
     )
   )
 )
@@ -73,14 +83,6 @@ ui <- dashboardPage(
 
 
 server <- function(input, output, session) {
-  
-  # output$summary <- renderPrint({
-  #   print((input$target))
-  #   print(input$target + 1)
-  #   print((values[["PERIODO_MAT"]][input$target + 1])[1])
-  #   print((values[["PERIODO_MAT"]][input$target + 1])[2])
-  #   
-  # })
   
   output$selectUI <- renderUI({
     
@@ -99,7 +101,7 @@ server <- function(input, output, session) {
                         from:[0,%s]})
                         })
                         </script>
-                        ', sel_values, 
+                        ', sel_values,
                 length(values[["PERIODO_MAT"]]) - 1,
                 length(values[["PERIODO_MAT"]]) - 1)))
     )
@@ -110,7 +112,8 @@ server <- function(input, output, session) {
     n_matriculas = matriculas_nome %>%
       filter(DIS_DESCRICAO == input$tab1_selectDisciplina &
                PERIODO_MAT >= ((values[["PERIODO_MAT"]][input$target + 1])[1]) &
-               PERIODO_MAT <= ((values[["PERIODO_MAT"]][input$target + 1])[2]))
+               PERIODO_MAT <= ((values[["PERIODO_MAT"]][input$target + 1])[2])
+      )
     
     if(n_matriculas %>% nrow() > 0){
     
@@ -161,7 +164,7 @@ server <- function(input, output, session) {
     highchart() %>% 
       hc_chart(animation = FALSE) %>% 
       hc_title(text = "Alunos aptos a pagar disciplinas") %>% 
-      hc_subtitle(text = "(não cursou a disciplina, mas já cumpriu seus pré-requisitos") %>%
+      hc_subtitle(text = "(não cursou a disciplina, mas já cumpriu seus pré-requisitos)") %>%
       hc_xAxis(categories = disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA) %>% 
       hc_plotOptions( column = list(stacking = "normal") ) %>% 
       hc_add_series(
@@ -176,6 +179,36 @@ server <- function(input, output, session) {
         color = "#2980b9",
         type = "column"
       )
+  })
+  
+  output$matriculas_pelos_periodos <- renderHighchart({
+    
+    matriculas = get_matriculas() %>%
+      filter(PERIODO_MAT > 2001) %>%
+      filter(PERIODO_MAT - as.integer(PERIODO_MAT) > 0) %>%
+      group_by(PERIODO_MAT) %>%
+      summarise(N = n()) %>%
+      mutate(
+        PERIODO = as.integer(PERIODO_MAT) + (PERIODO_MAT- as.integer(PERIODO_MAT)) * 5 - 0.5
+      )
+
+    x <- c("Periodo:", "Quantidade de matrículas: ")
+    y <- sprintf("{point.%s}", c("PERIODO_MAT", "N"))
+    tltip <- tooltip_table(x, y)
+
+    hchart(matriculas, "spline", hcaes(x = PERIODO, y = N)) %>%
+      hc_plotOptions(
+        series  = list(
+          marker = list(enabled = TRUE, 'x'), 
+          color = "#F50057"
+        )
+      ) %>%
+      hc_title(text = "Quantidade de matriculas totais") %>%
+      hc_subtitle(text = "(aluno-disciplina)") %>%
+      hc_yAxis(title = list(text = "Número de matrículas")) %>%
+      hc_xAxis(title = list(text = "Períodos"), min = min(matriculas$PERIODO_MAT)) %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip)
+    
   })
   
 }
