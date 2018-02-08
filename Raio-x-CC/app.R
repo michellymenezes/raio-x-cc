@@ -23,7 +23,8 @@ ui <- dashboardPage(
     sidebarMenu(id = "menu",
                 menuItem("Matrículas em disciplinas", tabName = "tab1", icon = icon("bookmark")),
                 menuItem("Alunos aptos", tabName = "tab2", icon = icon("bookmark")),
-                menuItem("Matrículas totais", tabName = "tab3", icon = icon("bookmark"))
+                menuItem("Matrículas totais", tabName = "tab3", icon = icon("bookmark")),
+                menuItem("Formados", tabName = "tab4", icon = icon("bookmark"))
     )
   ),
   dashboardBody(
@@ -81,6 +82,20 @@ ui <- dashboardPage(
                 column(width = 3),
                 column(width = 7, 
                        box(width = NULL, highchartOutput("matriculas_pelos_periodos"))
+                )
+              ) 
+      ),
+      
+      
+      tabItem(tabName = "tab4",
+              h3("Quantos alunos se formaram no período X. E no total? E em um intervalo?", align = "center"),
+              br(),
+              column(width = 6,
+                     box(width = NULL, highchartOutput("formados_total_stack"))
+              ),
+              fluidRow(
+                column(width = 6, 
+                       box(width = NULL, highchartOutput("formados_pelos_periodos"))
                 )
               ) 
       )
@@ -263,6 +278,68 @@ server <- function(input, output, session) {
       hc_yAxis(title = list(text = "Número de matrículas")) %>%
       hc_xAxis(title = list(text = "Períodos"), min = min(matriculas$PERIODO_MAT)) %>%
       hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip)
+    
+  })
+  
+  output$formados_pelos_periodos <- renderHighchart({
+    
+    formados = get_formados() 
+    formados_group = formados %>%
+      group_by(PERIODO_EVASAO) %>%
+      summarise(N = n())
+    
+    x <- c("Formados: ")
+    y <- sprintf("{point.%s}", c("N"))
+    tltip <- tooltip_table(x, y)
+    
+    hchart(formados_group, "column", hcaes(x = PERIODO_EVASAO, y = N)) %>%
+      hc_title(text = "Quantidade de alunos formados ao longo do tempo") %>%
+      hc_subtitle(text = "(a partir de 2001.1)") %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
+      hc_plotOptions(
+        series  = list(
+          color = "#9C27B0"
+        )
+      )
+      
+  })
+  
+  output$formados_total_stack <- renderHighchart({
+    
+    # formados = get_formados() 
+    # formados_group = formados %>%
+    #   group_by(PERIODO_EVASAO) %>%
+    #   summarise(N = n())
+    # 
+    # cols <- viridis(33)
+    # cols <- substr(cols, 0, 7)
+    # 
+    #  hchart(formados_group, "column", hcaes(x = 0, y = N, group = PERIODO_EVASAO)) %>%
+    #   hc_yAxis(title = list(text = "Número de matrículas")) %>%
+    #   hc_xAxis(title = list(text = "Períodos"), data = NULL) %>%
+    #   hc_plotOptions( column = list(stacking = "normal"),
+    #                   series = list(marker = list(enabled = FALSE))) %>%
+    #   hc_legend(enabled = FALSE) %>%
+    #    hc_colors(cols)
+    
+    formados = get_formados()
+    
+    formados_group = formados %>%
+      group_by(PERIODO_EVASAO) %>%
+      summarise(N = n()) %>%
+      ungroup() %>%
+      mutate(total = sum(formados_group$N),
+             PERIODO_EVASAO = as.numeric(PERIODO_EVASAO)) 
+    
+    colfunc <- colorRampPalette(c("deeppink", "blue"))
+    colors = colfunc(NROW(formados_group))
+    
+    N_PERIODOS = NROW(formados_group)
+    icons = rep("male", N_PERIODOS)
+    series = formados_group$PERIODO_EVASAO
+    n = formados_group$N %>% sort(decreasing = TRUE)
+    hciconarray(series, n, icons = icons, size = 3) %>%
+      hc_colors(colors)
     
   })
   
