@@ -19,15 +19,17 @@ ui <- dashboardPage(
   dashboardSidebar(
     useShinyjs(),
     sidebarMenu(id = "menu",
-                menuItem("Tab1", tabName = "tab1", icon = icon("bookmark")),
-                menuItem("Tab2", tabName = "tab2", icon = icon("bookmark")),
-                menuItem("Tab3", tabName = "tab3", icon = icon("bookmark"))
+                menuItem("Matrículas em disciplinas", tabName = "tab1", icon = icon("bookmark")),
+                menuItem("Alunos aptos", tabName = "tab2", icon = icon("bookmark")),
+                menuItem("Matrículas totais", tabName = "tab3", icon = icon("bookmark"))
     )
   ),
   dashboardBody(
     
     tabItems(
       tabItem(tabName = "tab1",
+              h3("Quantas pessoas se matricularam na disciplina X no período letivo Y?", align = "center"),
+              br(),
               fluidRow(
                 column(width = 3,
                        box(width = NULL, selectInput('tab1_selectDisciplina', 'Estados', 
@@ -52,6 +54,9 @@ ui <- dashboardPage(
       
       
       tabItem(tabName = "tab2",
+              h3("Quantos alunos estão aptos a cursar a disciplina X?", align = "center"),
+              h5("Possuir pré-requisitos necessários", align = "center"),
+              br(),
               fluidRow(
                 column(width = 3,
                        box(width = NULL, 
@@ -68,6 +73,8 @@ ui <- dashboardPage(
       ),
   
       tabItem(tabName = "tab3",
+              h3("Quantas matrículas foram efetuadas no período X?", align = "center"),
+              br(),
               fluidRow(
                 column(width = 3),
                 column(width = 7, 
@@ -170,13 +177,13 @@ server <- function(input, output, session) {
       hc_add_series(
         data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_APTOS), 
         name = "Quantidade de alunos aptos a pagar",  
-        color = "#B71C1C",
+        color = "#00BFA5",
         type = "column"
       ) %>% 
       hc_add_series(
         data = (disciplinas_qnt_alunos_aptos$QNT_ALUNOS_PAGANDO), 
         name = "Quantidade de alunos pagando",  
-        color = "#2980b9",
+        color = "#311B92",
         type = "column"
       )
   })
