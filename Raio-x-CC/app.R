@@ -32,7 +32,7 @@ ui <- dashboardPage(
               br(),
               fluidRow(
                 column(width = 3,
-                       box(width = NULL, selectInput('tab1_selectDisciplina', 'Estados', 
+                       box(width = NULL, selectInput('tab1_selectDisciplina', 'Disciplinas', 
                                                      choices = matriculas_nome %>%
                                                        select(DIS_DESCRICAO) %>% distinct() %>% na.omit() %>% arrange(DIS_DESCRICAO), 
                                                      multiple=F, selectize=TRUE),
@@ -42,7 +42,7 @@ ui <- dashboardPage(
                            
                        )),
                 column(width = 7,
-                       box(width = NULL, plotlyOutput("n_matriculas_periodo")),
+                       box(width = NULL, highchartOutput("n_matriculas_periodo")),
                        box(width = NULL,uiOutput('selectUI'),
                            sliderInput(inputId = "target", label = "Períodos:",
                                        min = 0, max = length(values$PERIODO_MAT) - 1,
@@ -114,7 +114,7 @@ server <- function(input, output, session) {
     )
   })
   
-  output$n_matriculas_periodo <- renderPlotly({
+  output$n_matriculas_periodo <- renderHighchart({
     
     n_matriculas = matriculas_nome %>%
       filter(DIS_DESCRICAO == input$tab1_selectDisciplina &
@@ -132,13 +132,19 @@ server <- function(input, output, session) {
           summarise(n = n())
         names(n_matriculas)[1:2] = c("Período", "Disciplina")
         
+
        g = ggplot(n_matriculas %>% na.omit(), aes(Período, n, group = Disciplina)) +
          geom_point() +
          geom_line() +
          ggtitle("Número de matrículas realizadas por período") + 
          theme(axis.text.x = element_text(angle = 45, hjust = 1))
        
-       ggplotly(g, tooltip=c("x", "y"))
+       #ggplotly(g, tooltip=c("x", "y"))
+       highchart() %>%
+         hc_xAxis(categories = n_matriculas$Período) %>% 
+       hc_add_series(n_matriculas %>% na.omit(), "line", hcaes(x = Período, y = n)) %>%
+         hc_title(text = "Número de matrículas por período")
+       
        
       }else{
         n_matriculas = n_matriculas %>%
@@ -146,15 +152,51 @@ server <- function(input, output, session) {
           mutate(PERIODO_MAT = as.character(PERIODO_MAT)) %>%
           group_by(PERIODO_MAT, DIS_DESCRICAO, MAT_TUR_TURMA) %>%
           summarise(n = n())
-        names(n_matriculas)[1:3] = c("Período", "Disciplina", "Turma")
         
-        g = ggplot(n_matriculas %>% na.omit(), aes(x = Período, y = n, group = Turma, color = Turma)) +
-          geom_point() +
-          geom_line() + 
-          ggtitle("Número de matrículas realizadas por período") + 
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        
+        names(n_matriculas)[1:3] = c("Periodo", "Disciplina", "Turma")
+        mat  = data_frame(Periodo = as.character(), Turma = as.character())  
+        peri = n_matriculas %>% ungroup() %>% select(Periodo) %>% unique()
+        tur = n_matriculas %>% ungroup() %>% select(Turma) %>% unique()
+        
+        
+        for(i in 1:(tur %>% nrow())){
+          
+          
+          temp = peri
+          temp$Turma = NA
+          
+          temp$Turma = tur$Turma[i]
 
-        ggplotly(g, tooltip=c("x", "y", "group"))
+          names(temp) = c("Periodo", "Turma")
+
+          mat = mat %>% rbind(temp)
+          print(tur$Turma[i])
+
+        }
+        
+        print(mat)
+        mat  =  mat %>% left_join(n_matriculas)
+        mat$n[is.na(mat$n)] = -1
+        print(mat[11:20,])
+        
+        n_matriculas$Periodo = as.numeric(n_matriculas$Periodo)
+        
+      
+        
+        # g = ggplot(n_matriculas %>% na.omit(), aes(x = Periodo, y = n, group = Turma, color = Turma)) + 
+        #   geom_point() +
+        #   geom_line() + 
+        #   ggtitle("Número de matrículas realizadas por período") + 
+        #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+     
+        # highchart() %>%
+        #   hc_xAxis(categories = as.character(mat$Periodo %>% unique())) %>%
+        hchart(n_matriculas %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma)) %>%
+          hc_title(text = "Número de matrículas por período")
+        #   hc_add_series(mat %>% na.omit(), "line", hcaes(x = Periodo, y = n, group = Turma))
+        
+        #ggplotly(g, tooltip=c("x", "y", "group"))
       }
     }else{
       return(NULL)
