@@ -9,6 +9,7 @@ library(plotly)
 library(viridis)
 library(viridisLite)
 
+formados = get_formados() 
 matriculas = get_matriculas()
 diciplinas = get_disciplinas()
 disciplinas_qnt_alunos_aptos = get_disciplinas_qnt_alunos_aptos()
@@ -91,7 +92,9 @@ ui <- dashboardPage(
               h3("Quantos alunos se formaram no período X. E no total? E em um intervalo?", align = "center"),
               br(),
               column(width = 6,
-                     box(width = NULL, highchartOutput("formados_total_stack"))
+                     box(width = NULL, highchartOutput("formados_total_stack")),
+                     box(width = NULL, uiOutput('formados_years_select'))
+       
               ),
               fluidRow(
                 column(width = 6, 
@@ -340,6 +343,17 @@ server <- function(input, output, session) {
     n = formados_group$N %>% sort(decreasing = TRUE)
     hciconarray(series, n, icons = icons, size = 3) %>%
       hc_colors(colors)
+    
+  })
+
+  output$formados_years_select <- renderUI({
+    
+    formados = mutate(PERIODO_EVASAO = as.numeric(PERIODO_EVASAO))
+    
+    sliderInput(inputId = "formados_years", label = "Anos:",
+                min = min(formados$PERIODO_EVASAO), max = max(formados$PERIODO_EVASAO), 
+                sep = "", value = c(2015.1, 2017.1)
+    )
     
   })
   
