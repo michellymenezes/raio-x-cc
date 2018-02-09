@@ -64,6 +64,23 @@ get_alunos = function(){
   return(alunos)
 }
 
+get_formados = function(){
+ 
+  GRADUADO = 1
+  N_COLOU_GRAU = 10
+  DECISAO_JUDICIAL = 20
+  
+  se_formou_cod = c(GRADUADO, N_COLOU_GRAU, DECISAO_JUDICIAL)
+  
+  formados = alunos %>%
+    filter(ALU_FORMA_EVASAO %in% se_formou_cod) %>%
+    filter(PERIODO_EVASAO > 2001) 
+  
+   return(formados)
+}
+
 get_alunos_ativos = function(){
   return(alunos_ativos)
 }
+
+

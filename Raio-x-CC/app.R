@@ -8,6 +8,8 @@ source("pergunta02.R")
 library(plotly)
 library(viridisLite)
 
+formados = get_formados()
+formados_values = list(PERIODO_EVASAO = (formados %>% select(PERIODO_EVASAO) %>% unique() %>% arrange(PERIODO_EVASAO))$PERIODO_EVASAO %>% na.omit())
 matriculas = get_matriculas()
 alunos_ativos = get_alunos_ativos() %>% group_by(periodo, PERIODO_INGRESSAO) %>% summarise(n = n())
 diciplinas = get_disciplinas()
@@ -24,6 +26,7 @@ ui <- dashboardPage(
                 menuItem("Matrículas em disciplinas", tabName = "tab1", icon = icon("bookmark")),
                 menuItem("Alunos aptos", tabName = "tab2", icon = icon("bookmark")),
                 menuItem("Matrículas totais", tabName = "tab3", icon = icon("bookmark")),
+                menuItem("Formados", tabName = "tab4", icon = icon("bookmark")),
                 menuItem("Matrículas ativas", tabName = "tab5", icon = icon("bookmark"))
     )
   ),
@@ -85,6 +88,36 @@ ui <- dashboardPage(
                 )
               ) 
       ),
+
+      tabItem(tabName = "tab4",
+              h3("Quantos alunos se formaram no período X? E no total? E em um intervalo?", align = "center"),
+              br(),
+              fluidRow(
+                column(width = 3),
+                column(width = 6,
+                       box(width = NULL, highchartOutput("formados_pelos_periodos"))
+                ),
+                column(width = 3)
+              ),
+              fluidRow(
+                column(width = 2),
+                column(width = 4,
+                       box(width = NULL,highchartOutput("formados_total_stack")),
+                       box(width = NULL,
+                           uiOutput('formados_years_select'),
+                           sliderInput(inputId = "targetFormados", label = "Períodos:",
+                                       min = 0, max = length(formados_values$PERIODO_EVASAO) - 1,
+                                       step = 1, sep = "",
+                                       value = c(0, length(formados_values$PERIODO_EVASAO) - 1))
+                       )
+                ),
+                column(width = 4,
+                       box(width = NULL, highchartOutput("formados_icon_graph"))
+                ),
+                column(width = 2)
+              )
+      ),
+
       tabItem(tabName = "tab5",
               h3("Qual o número de alunos ativos no curso?", align = "center"),
               br(),
@@ -110,7 +143,7 @@ server <- function(input, output, session) {
   output$selectUI <- renderUI({
     
     sel_values <- paste(paste0('"', values[["PERIODO_MAT"]], '"'), collapse = ',')
-    print(sel_values)
+    #print(sel_values)
     list(
       (HTML(
         sprintf('
@@ -187,14 +220,14 @@ server <- function(input, output, session) {
           names(temp) = c("Periodo", "Turma")
 
           mat = mat %>% rbind(temp)
-          print(tur$Turma[i])
+          #print(tur$Turma[i])
 
         }
         
-        print(mat)
+        #print(mat)
         mat  =  mat %>% left_join(n_matriculas)
         mat$n[is.na(mat$n)] = -1
-        print(mat[11:20,])
+        #print(mat[11:20,])
         
         n_matriculas$Periodo = as.numeric(n_matriculas$Periodo)
         
@@ -300,8 +333,134 @@ server <- function(input, output, session) {
           color = "#17e2af"
         )
       )
+  })
+  
+  output$formados_pelos_periodos <- renderHighchart({
+    
+    formados = get_formados() 
+    formados_group = formados %>%
+      group_by(PERIODO_EVASAO) %>%
+      summarise(N = n())
+    
+    x <- c("Formados: ")
+    y <- sprintf("{point.%s}", c("N"))
+    tltip <- tooltip_table(x, y)
+    
+    hchart(formados_group, "column", hcaes(x = PERIODO_EVASAO, y = N)) %>%
+      hc_title(text = "Quantidade de alunos formados ao longo do tempo") %>%
+      hc_subtitle(text = "(a partir de 2001.1)") %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
+      hc_plotOptions(
+        series  = list(
+          color = "#9C27B0"
+        )
+      )
+      
+  })
+  
+  output$formados_total_stack <- renderHighchart({
+    
+    interval_begin = (formados_values[["PERIODO_EVASAO"]][input$targetFormados + 1])[1]
+    interval_end = (formados_values[["PERIODO_EVASAO"]][input$targetFormados + 1])[2]
+    
+    formados = get_formados()
+    formados_group = formados %>%
+      group_by(PERIODO_EVASAO) %>%
+      summarise(N = n()) %>%
+      filter(
+        PERIODO_EVASAO >= (interval_begin) &
+          PERIODO_EVASAO <= (interval_end)
+      )
+    
+    cols <- viridis(33)
+    cols <- substr(cols, 0, 7)
+    
+    total_n_formados = sum(formados_group$N) 
+    annotation_y = total_n_formados + 2
+    
+    title_text = paste("Quantidade de alunos formados entre <i>", interval_begin, "</i>e<i>", interval_end, "</i>")
+    subtitle_text = paste("(total de formados desde 2001:<b>", NROW(formados), "</b>)")
+    
+    tooltip = "<b>Periodo:</b> {point.PERIODO_EVASAO}<br/><b>Qnt formados:</b> {point.y}"
+
+     hchart(formados_group, "column", hcaes(x = 0, y = N, group = PERIODO_EVASAO)) %>%
+      hc_title(text = title_text, style = list(fontSize = "14px"), align = "left") %>%
+      hc_subtitle(text = subtitle_text, style = list(fontSize = "12px"), align = "left") %>%
+      hc_yAxis(title = list(text = "Número de formados")) %>%
+      hc_xAxis(labels = list(enabled = FALSE),
+               marker = list(enabled = TRUE)) %>%
+      hc_plotOptions( column = list(stacking = "normal"),
+                      series = list(marker = list(enabled = FALSE))) %>%
+      hc_legend(enabled = FALSE) %>%
+      hc_tooltip(headerFormat = "", pointFormat = tooltip) %>%
+      hc_add_annotation(xValue = 0.3, yValue = annotation_y, 
+                        title = list(
+                          text = total_n_formados,
+                          style = list(
+                            color = "#4A148C",
+                            fontFamily = 'Tangerine',
+                            fontSize = "22"
+                          )
+                        )                        
+      ) %>%
+      hc_colors(cols)
   
   })
+  
+  output$formados_icon_graph <- renderHighchart({
+    
+    formados = get_formados()
+    
+    formados_group = formados %>%
+      mutate(PERIODO_EVASAO = as.integer(formados$PERIODO_EVASAO)) %>%
+      group_by(PERIODO_EVASAO) %>%
+      summarise(N = n()) %>%
+      ungroup() %>%
+      mutate(total = sum(formados_group$N))
+    
+    colfunc <- colorRampPalette(c("blue4", "grey50", "deeppink", "grey60", "steelblue", 
+                                  "turquoise", "blue", "orchid", "lightpink1", "red", 
+                                  "gold4", "gold")
+                )
+    colors = colfunc(NROW(formados_group))
+    
+    N_PERIODOS = NROW(formados_group)
+    icons = rep("male", N_PERIODOS)
+    
+    series = formados_group$PERIODO_EVASAO
+    n = formados_group$N %>% sort(decreasing = TRUE)
+    
+    title_text = paste("Quantidade de alunos formados <i>através dos anos</i>")
+
+    hciconarray(series, n, icons = icons, size = 2.5) %>%
+      hc_title(text = title_text, style = list(fontSize = "14px"), align = "left") %>%
+      hc_legend(align = "left", verticalAlign = "top", layout = "vertical", y = 30) %>%
+      hc_colors(colors)
+    
+  })
+
+  output$formados_years_select <- renderUI({
+    
+    m_values <- paste(paste0('"', formados_values[["PERIODO_EVASAO"]], '"'), collapse = ',')
+    list(
+      (HTML(
+        sprintf('
+                        <script type="text/javascript">
+                        $(document).ready(function() {
+                        var vals = [%s];
+                        $(\'#targetFormados\').data(\'ionRangeSlider\').update(
+                        {values:vals,
+                        min: 0,
+                        max: %s,
+                        from:[0,%s]})
+                        })
+                        </script>
+                        ', m_values,
+                length(formados_values[["PERIODO_EVASAO"]]) - 1,
+                length(formados_values[["PERIODO_EVASAO"]]) - 1)))
+    )
+  })
+  
 }
 
 shinyApp(ui = ui, server = server)
