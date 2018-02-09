@@ -125,7 +125,7 @@ ui <- dashboardPage(
               h3("Qual o número de alunos ativos no curso?", align = "center"),
               br(),
               fluidRow(
-                column(width = 2),
+                column(width = 3, infoBoxOutput(width = 12,"total_alunos_ativos")),
                 column(width = 9, 
                        box(width = NULL, highchartOutput("alunos_ativos")),
                        box(width = NULL, sliderInput("tab5_selectPeriodoAtivo", label = "Períodos:",
@@ -316,11 +316,22 @@ server <- function(input, output, session) {
       hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip)
     
   })
+  
+  output$total_alunos_ativos <- renderInfoBox({
+    total = (alunos_ativos %>% ungroup() %>% filter(periodo <= input$tab5_selectPeriodoAtivo[2], periodo > input$tab5_selectPeriodoAtivo[1]-1) %>% select(n)) %>% sum()
+    infoBox(width = 12,
+      "Total de alunos",
+      total,
+      color = "maroon",
+      icon = icon("info-sign", lib = "glyphicon")
+      
+    )
+  })
 
   output$alunos_ativos <- renderHighchart({
     
-    x <- c("Período de entrada: ", "Número de matrículas: ")
-    y <- sprintf("{point.%s}", c("PERIODO_INGRESSAO", "n"))
+    x <- c("Período de entrada: ", "Número de matrículas: ", "Período atual: ")
+    y <- sprintf("{point.%s}", c("PERIODO_INGRESSAO", "n", "periodo"))
     tltip <- tooltip_table(x, y)
     
     highchart() %>%
@@ -333,7 +344,7 @@ server <- function(input, output, session) {
       hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
       hc_plotOptions(
         series  = list(
-          color = "#17e2af"
+          color = "#D81B60"
         )
       )
   })
