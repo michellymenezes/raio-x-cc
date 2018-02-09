@@ -6,12 +6,12 @@ library(ggplot2)
 library(highcharter)
 source("pergunta02.R")
 library(plotly)
-library(viridis)
 library(viridisLite)
 
 formados = get_formados()
 formados_values = list(PERIODO_EVASAO = (formados %>% select(PERIODO_EVASAO) %>% unique() %>% arrange(PERIODO_EVASAO))$PERIODO_EVASAO %>% na.omit())
 matriculas = get_matriculas()
+alunos_ativos = get_alunos_ativos() %>% group_by(periodo, PERIODO_INGRESSAO) %>% summarise(n = n())
 diciplinas = get_disciplinas()
 disciplinas_qnt_alunos_aptos = get_disciplinas_qnt_alunos_aptos()
 matriculas_nome = matriculas %>% 
@@ -26,7 +26,8 @@ ui <- dashboardPage(
                 menuItem("Matrículas em disciplinas", tabName = "tab1", icon = icon("bookmark")),
                 menuItem("Alunos aptos", tabName = "tab2", icon = icon("bookmark")),
                 menuItem("Matrículas totais", tabName = "tab3", icon = icon("bookmark")),
-                menuItem("Formados", tabName = "tab4", icon = icon("bookmark"))
+                menuItem("Formados", tabName = "tab4", icon = icon("bookmark")),
+                menuItem("Matrículas ativas", tabName = "tab5", icon = icon("bookmark"))
     )
   ),
   dashboardBody(
@@ -87,8 +88,7 @@ ui <- dashboardPage(
                 )
               ) 
       ),
-      
-      
+
       tabItem(tabName = "tab4",
               h3("Quantos alunos se formaram no período X? E no total? E em um intervalo?", align = "center"),
               br(),
@@ -116,6 +116,21 @@ ui <- dashboardPage(
                 ),
                 column(width = 2)
               )
+      ),
+
+      tabItem(tabName = "tab5",
+              h3("Qual o número de alunos ativos no curso?", align = "center"),
+              br(),
+              fluidRow(
+                column(width = 2),
+                column(width = 9, 
+                       box(width = NULL, highchartOutput("alunos_ativos")),
+                       box(width = NULL, sliderInput("tab5_selectPeriodoAtivo", label = "Períodos:",
+                                    min = 1, max = (alunos %>% filter(ALU_FORMA_EVASAO == 0) %>% select(PERIODO_INGRESSAO) %>% unique() %>% nrow()),
+                                    step = 1, sep = "", value = c(1,12)
+                       ))
+                )
+              ) 
       )
     )
   )
@@ -247,6 +262,7 @@ server <- function(input, output, session) {
     disciplinas_qnt_alunos_aptos = disciplinas_qnt_alunos_aptos %>%
       filter(NOME_DISCIPLINA %in% input$tab2_selectDisciplina) %>%
       reorder_by_qnt()
+    print(disciplinas_qnt_alunos_aptos)
     
     highchart() %>% 
       hc_chart(animation = FALSE) %>% 
@@ -296,6 +312,27 @@ server <- function(input, output, session) {
       hc_xAxis(title = list(text = "Períodos"), min = min(matriculas$PERIODO_MAT)) %>%
       hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip)
     
+  })
+
+  output$alunos_ativos <- renderHighchart({
+    
+    x <- c("Período de entrada: ", "Número de matrículas: ")
+    y <- sprintf("{point.%s}", c("PERIODO_INGRESSAO", "n"))
+    tltip <- tooltip_table(x, y)
+    
+    highchart() %>%
+      hc_add_series(alunos_ativos %>% filter(periodo <= input$tab5_selectPeriodoAtivo[2], periodo > input$tab5_selectPeriodoAtivo[1]-1),
+                    showInLegend = FALSE, 
+                    "column", 
+                    hcaes(x = periodo, y = n))%>%
+      hc_yAxis(title = list(text = "Número de matrículas")) %>%
+      hc_xAxis(title = list(text = "Período ativo")) %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
+      hc_plotOptions(
+        series  = list(
+          color = "#17e2af"
+        )
+      )
   })
   
   output$formados_pelos_periodos <- renderHighchart({
