@@ -25,7 +25,20 @@ disciplinas = disciplinas %>%
 
 #matriculas  = (alunos %>% select(ALU_MATRICULA)) %>% left_join(matriculas, by = c("ALU_MATRICULA" = "MAT_ALU_MATRICULA"))
 
-matriculas = matriculas %>% filter(MAT_ALU_MATRICULA %in% alunos$ALU_MATRICULA) 
+matriculas = matriculas %>% filter(MAT_ALU_MATRICULA %in% alunos$ALU_MATRICULA)
+
+periodos_matricula = alunos %>% 
+  filter(ALU_FORMA_EVASAO == 0) %>% 
+  select(PERIODO_INGRESSAO) %>%
+  unique() %>%
+  arrange(-PERIODO_INGRESSAO)
+
+periodos_matricula$periodo = NA
+periodos_matricula$periodo = seq.int(1,nrow(periodos_matricula))
+
+alunos_ativos = alunos %>% 
+  filter(ALU_FORMA_EVASAO == 0) %>%
+  left_join(periodos_matricula)
 
 get_matriculas = function(){
   return(matriculas)
@@ -49,4 +62,8 @@ get_disciplinas_qnt_alunos_aptos = function() {
 
 get_alunos = function(){
   return(alunos)
+}
+
+get_alunos_ativos = function(){
+  return(alunos_ativos)
 }
