@@ -8,7 +8,10 @@ source("pergunta02.R")
 library(plotly)
 library(viridisLite)
 
-formados = get_formados()
+formados = get_formados() 
+formados_group = formados %>%
+  group_by(PERIODO_EVASAO) %>%
+  summarise(N = n())
 formados_values = list(PERIODO_EVASAO = (formados %>% select(PERIODO_EVASAO) %>% unique() %>% arrange(PERIODO_EVASAO))$PERIODO_EVASAO %>% na.omit())
 matriculas = get_matriculas()
 alunos_ativos = get_alunos_ativos() %>% group_by(periodo, PERIODO_INGRESSAO) %>% summarise(n = n())
@@ -337,11 +340,6 @@ server <- function(input, output, session) {
   
   output$formados_pelos_periodos <- renderHighchart({
     
-    formados = get_formados() 
-    formados_group = formados %>%
-      group_by(PERIODO_EVASAO) %>%
-      summarise(N = n())
-    
     x <- c("Formados: ")
     y <- sprintf("{point.%s}", c("N"))
     tltip <- tooltip_table(x, y)
@@ -363,10 +361,7 @@ server <- function(input, output, session) {
     interval_begin = (formados_values[["PERIODO_EVASAO"]][input$targetFormados + 1])[1]
     interval_end = (formados_values[["PERIODO_EVASAO"]][input$targetFormados + 1])[2]
     
-    formados = get_formados()
-    formados_group = formados %>%
-      group_by(PERIODO_EVASAO) %>%
-      summarise(N = n()) %>%
+    mm_formados_group = formados_group %>%
       filter(
         PERIODO_EVASAO >= (interval_begin) &
           PERIODO_EVASAO <= (interval_end)
@@ -375,7 +370,7 @@ server <- function(input, output, session) {
     cols <- viridis(33)
     cols <- substr(cols, 0, 7)
     
-    total_n_formados = sum(formados_group$N) 
+    total_n_formados = sum(mm_formados_group$N) 
     annotation_y = total_n_formados + 2
     
     title_text = paste("Quantidade de alunos formados entre <i>", interval_begin, "</i>e<i>", interval_end, "</i>")
@@ -383,7 +378,7 @@ server <- function(input, output, session) {
     
     tooltip = "<b>Periodo:</b> {point.PERIODO_EVASAO}<br/><b>Qnt formados:</b> {point.y}"
 
-     hchart(formados_group, "column", hcaes(x = 0, y = N, group = PERIODO_EVASAO)) %>%
+     hchart(mm_formados_group, "column", hcaes(x = 0, y = N, group = PERIODO_EVASAO)) %>%
       hc_title(text = title_text, style = list(fontSize = "14px"), align = "left") %>%
       hc_subtitle(text = subtitle_text, style = list(fontSize = "12px"), align = "left") %>%
       hc_yAxis(title = list(text = "Número de formados")) %>%
@@ -409,9 +404,7 @@ server <- function(input, output, session) {
   
   output$formados_icon_graph <- renderHighchart({
     
-    formados = get_formados()
-    
-    formados_group = formados %>%
+    m_formados_group = get_formados()  %>%
       mutate(PERIODO_EVASAO = as.integer(formados$PERIODO_EVASAO)) %>%
       group_by(PERIODO_EVASAO) %>%
       summarise(N = n()) %>%
@@ -422,13 +415,13 @@ server <- function(input, output, session) {
                                   "turquoise", "blue", "orchid", "lightpink1", "red", 
                                   "gold4", "gold")
                 )
-    colors = colfunc(NROW(formados_group))
+    colors = colfunc(NROW(m_formados_group))
     
-    N_PERIODOS = NROW(formados_group)
+    N_PERIODOS = NROW(m_formados_group)
     icons = rep("male", N_PERIODOS)
     
-    series = formados_group$PERIODO_EVASAO
-    n = formados_group$N %>% sort(decreasing = TRUE)
+    series = m_formados_group$PERIODO_EVASAO
+    n = m_formados_group$N %>% sort(decreasing = TRUE)
     
     title_text = paste("Quantidade de alunos formados <i>através dos anos</i>")
 
