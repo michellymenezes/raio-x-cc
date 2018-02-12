@@ -269,14 +269,12 @@ server <- function(input, output, session) {
   
   output$formados_pelos_periodos <- renderHighchart({
     
-    x <- c("Formados: ")
-    y <- sprintf("{point.%s}", c("N"))
-    tltip <- tooltip_table(x, y)
+    tooltip = "<b>Periodo:</b> {point.PERIODO_EVASAO}<br/><b>Qnt formados:</b> {point.y}"
     
     hchart(formados_group, "column", hcaes(x = PERIODO_EVASAO, y = N)) %>%
       hc_title(text = "Quantidade de alunos formados ao longo do tempo") %>%
       hc_subtitle(text = "(a partir de 2001.1)") %>%
-      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tooltip) %>%
       hc_plotOptions(
         series  = list(
           color = "#9C27B0"
@@ -300,7 +298,7 @@ server <- function(input, output, session) {
     cols <- substr(cols, 0, 7)
     
     total_n_formados = sum(mm_formados_group$N) 
-    annotation_y = total_n_formados + 2
+    annotation_y = total_n_formados + 30
     
     title_text = paste("Quantidade de alunos formados entre <i>", interval_begin, "</i>e<i>", interval_end, "</i>")
     subtitle_text = paste("(total de formados desde 2001:<b>", NROW(formados), "</b>)")
@@ -333,16 +331,20 @@ server <- function(input, output, session) {
   
   output$formados_icon_graph <- renderHighchart({
     
-    m_formados_group = get_formados()  %>%
+    m_formados_group = formados %>%
       mutate(PERIODO_EVASAO = as.integer(formados$PERIODO_EVASAO)) %>%
       group_by(PERIODO_EVASAO) %>%
-      summarise(N = n()) %>%
-      ungroup() %>%
-      mutate(total = sum(formados_group$N))
+      summarise(total = n())
+
+    # ordena descrescente pelos anos com maior total de formados
+    m_formados_group = m_formados_group[order(-m_formados_group$total),] 
     
-    colfunc <- colorRampPalette(c("blue4", "grey50", "deeppink", "grey60", "steelblue", 
-                                  "turquoise", "blue", "orchid", "lightpink1", "red", 
-                                  "gold4", "gold")
+    colfunc <- colorRampPalette(c("darkblue",  "dodgerblue", "skyblue", 
+                                  "seagreen4", "chartreuse3",  "darkolivegreen2",
+                                  "grey60",
+                                  "darkmagenta", "plum",
+                                  "deeppink3", 'hotpink', "red", "lightpink1", 
+                                  "darkorange", "gold", "gold3", "black" )
                 )
     colors = colfunc(NROW(m_formados_group))
     
@@ -350,13 +352,13 @@ server <- function(input, output, session) {
     icons = rep("male", N_PERIODOS)
     
     series = m_formados_group$PERIODO_EVASAO
-    n = m_formados_group$N %>% sort(decreasing = TRUE)
+    n = m_formados_group$total
     
     title_text = paste("Quantidade de alunos formados <i>através dos anos</i>")
 
     hciconarray(series, n, icons = icons, size = 2.5) %>%
       hc_title(text = title_text, style = list(fontSize = "14px"), align = "left") %>%
-      hc_legend(align = "left", verticalAlign = "top", layout = "vertical", y = 30) %>%
+      hc_legend(align = "left", verticalAlign = "top", layout = "vertical", y = 45, x = -10) %>%
       hc_colors(colors)
     
   })
