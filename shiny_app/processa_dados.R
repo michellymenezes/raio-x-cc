@@ -83,4 +83,7 @@ get_alunos_ativos = function(){
   return(alunos_ativos)
 }
 
-
+reorder_by_qnt = function(df) {
+  df = df[order(-df$QNT_ALUNOS_APTOS),] 
+  return(df)
+}
