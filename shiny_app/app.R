@@ -1,24 +1,24 @@
 library(shinydashboard)
 library(shinyjs)
-source("processa_dados.R")
 library(readr)
 library(ggplot2)
 library(highcharter)
-source("pergunta02.R")
 library(plotly)
 library(viridisLite)
+source("processa_dados.R")
+source("ui_scripts.R")
 
 formados = get_formados() 
-formados_group = formados %>%
-  group_by(PERIODO_EVASAO) %>%
-  summarise(N = n())
+formados_group = formados %>% group_by(PERIODO_EVASAO) %>% summarise(N = n())
 formados_values = list(PERIODO_EVASAO = (formados %>% select(PERIODO_EVASAO) %>% unique() %>% arrange(PERIODO_EVASAO))$PERIODO_EVASAO %>% na.omit())
+
 matriculas = get_matriculas()
 alunos_ativos = get_alunos_ativos() %>% group_by(periodo, PERIODO_INGRESSAO) %>% summarise(n = n())
+
 diciplinas = get_disciplinas()
 disciplinas_qnt_alunos_aptos = get_disciplinas_qnt_alunos_aptos()
-matriculas_nome = matriculas %>% 
-  left_join(disciplinas %>% select(DIS_DISCIPLINA, DIS_DESCRICAO), by = c("MAT_TUR_DIS_DISCIPLINA" = "DIS_DISCIPLINA"))
+
+matriculas_nome = matriculas %>% left_join(disciplinas %>% select(DIS_DISCIPLINA, DIS_DESCRICAO), by = c("MAT_TUR_DIS_DISCIPLINA" = "DIS_DISCIPLINA"))
 values = list(PERIODO_MAT = (matriculas %>% select(PERIODO_MAT) %>% unique() %>% arrange(PERIODO_MAT))$PERIODO_MAT %>% na.omit())
 
 ui <- dashboardPage(
@@ -37,109 +37,27 @@ ui <- dashboardPage(
     
     tabItems(
       tabItem(tabName = "tab1",
-              h3("Quantas pessoas se matricularam na disciplina X no período letivo Y?", align = "center"),
-              br(),
-              fluidRow(
-                column(width = 3,
-                       box(width = NULL, selectInput('tab1_selectDisciplina', 'Disciplinas', 
-                                                     choices = matriculas_nome %>%
-                                                       select(DIS_DESCRICAO) %>% distinct() %>% na.omit() %>% arrange(DIS_DESCRICAO), 
-                                                     multiple=F, selectize=TRUE),
-                           radioButtons(inputId = "tab1_tipoTurma", label = "Modo de exibição:",
-                                        choices = c("Por turma", "Agrupada"), selected = "Por turma")
-                           #verbatimTextOutput('summary')
-                           
-                       )),
-                column(width = 7,
-                       box(width = NULL, highchartOutput("n_matriculas_periodo")),
-                       box(width = NULL,uiOutput('selectUI'),
-                           sliderInput(inputId = "target", label = "Períodos:",
-                                       min = 0, max = length(values$PERIODO_MAT) - 1,
-                                       step = 1, sep = "",
-                                       value = c(0, length(values$PERIODO_MAT) - 1)))
-                )
-              )
+        tab1(values, matriculas_nome)
       ),
       
-      
       tabItem(tabName = "tab2",
-              h3("Quantos alunos estão aptos a cursar a disciplina X?", align = "center"),
-              h5("Possuir pré-requisitos necessários", align = "center"),
-              br(),
-              fluidRow(
-                column(width = 3,
-                       box(width = NULL, 
-                           selectInput("tab2_selectDisciplina", label = h3("Disciplinas"),
-                                       choices = unique(disciplinas_qnt_alunos_aptos$NOME_DISCIPLINA), multiple=T,
-                                       selected = c("LAB.DE ORG.E ARQUITETURA DE COMPUTADORES", "ORG.E ARQUITETURA DE COMPUTADORES I")
-                           )
-                       )
-                ),
-                column(width = 7,
-                       box(width = NULL, highchartOutput("n_alunos_aptos"))
-                )
-              ) 
+        tab2()
       ),
   
       tabItem(tabName = "tab3",
-              h3("Quantas matrículas foram efetuadas no período X?", align = "center"),
-              br(),
-              fluidRow(
-                column(width = 3),
-                column(width = 7, 
-                       box(width = NULL, highchartOutput("matriculas_pelos_periodos"))
-                )
-              ) 
+        tab3()
       ),
 
       tabItem(tabName = "tab4",
-              h3("Quantos alunos se formaram no período X? E no total? E em um intervalo?", align = "center"),
-              br(),
-              fluidRow(
-                column(width = 3),
-                column(width = 6,
-                       box(width = NULL, highchartOutput("formados_pelos_periodos"))
-                ),
-                column(width = 3)
-              ),
-              fluidRow(
-                column(width = 2),
-                column(width = 4,
-                       box(width = NULL,highchartOutput("formados_total_stack")),
-                       box(width = NULL,
-                           uiOutput('formados_years_select'),
-                           sliderInput(inputId = "targetFormados", label = "Períodos:",
-                                       min = 0, max = length(formados_values$PERIODO_EVASAO) - 1,
-                                       step = 1, sep = "",
-                                       value = c(0, length(formados_values$PERIODO_EVASAO) - 1))
-                       )
-                ),
-                column(width = 4,
-                       box(width = NULL, highchartOutput("formados_icon_graph"))
-                ),
-                column(width = 2)
-              )
+        tab4(formados_values)
       ),
 
       tabItem(tabName = "tab5",
-              h3("Qual o número de alunos ativos no curso?", align = "center"),
-              br(),
-              fluidRow(
-                column(width = 3, infoBoxOutput(width = 12,"total_alunos_ativos")),
-                column(width = 9, 
-                       box(width = NULL, highchartOutput("alunos_ativos")),
-                       box(width = NULL, sliderInput("tab5_selectPeriodoAtivo", label = "Períodos:",
-                                    min = 1, max = (alunos %>% filter(ALU_FORMA_EVASAO == 0) %>% select(PERIODO_INGRESSAO) %>% unique() %>% nrow()),
-                                    step = 1, sep = "", value = c(1,12)
-                       ))
-                )
-              ) 
+        tab5()
       )
     )
   )
 )
-
-
 
 server <- function(input, output, session) {
   
@@ -351,14 +269,12 @@ server <- function(input, output, session) {
   
   output$formados_pelos_periodos <- renderHighchart({
     
-    x <- c("Formados: ")
-    y <- sprintf("{point.%s}", c("N"))
-    tltip <- tooltip_table(x, y)
+    tooltip = "<b>Periodo:</b> {point.PERIODO_EVASAO}<br/><b>Qnt formados:</b> {point.y}"
     
     hchart(formados_group, "column", hcaes(x = PERIODO_EVASAO, y = N)) %>%
       hc_title(text = "Quantidade de alunos formados ao longo do tempo") %>%
       hc_subtitle(text = "(a partir de 2001.1)") %>%
-      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tltip) %>%
+      hc_tooltip(table = TRUE, headerFormat = "", pointFormat = tooltip) %>%
       hc_plotOptions(
         series  = list(
           color = "#9C27B0"
@@ -382,7 +298,7 @@ server <- function(input, output, session) {
     cols <- substr(cols, 0, 7)
     
     total_n_formados = sum(mm_formados_group$N) 
-    annotation_y = total_n_formados + 2
+    annotation_y = total_n_formados + 30
     
     title_text = paste("Quantidade de alunos formados entre <i>", interval_begin, "</i>e<i>", interval_end, "</i>")
     subtitle_text = paste("(total de formados desde 2001:<b>", NROW(formados), "</b>)")
@@ -415,16 +331,20 @@ server <- function(input, output, session) {
   
   output$formados_icon_graph <- renderHighchart({
     
-    m_formados_group = get_formados()  %>%
+    m_formados_group = formados %>%
       mutate(PERIODO_EVASAO = as.integer(formados$PERIODO_EVASAO)) %>%
       group_by(PERIODO_EVASAO) %>%
-      summarise(N = n()) %>%
-      ungroup() %>%
-      mutate(total = sum(formados_group$N))
+      summarise(total = n())
+
+    # ordena descrescente pelos anos com maior total de formados
+    m_formados_group = m_formados_group[order(-m_formados_group$total),] 
     
-    colfunc <- colorRampPalette(c("blue4", "grey50", "deeppink", "grey60", "steelblue", 
-                                  "turquoise", "blue", "orchid", "lightpink1", "red", 
-                                  "gold4", "gold")
+    colfunc <- colorRampPalette(c("darkblue",  "dodgerblue", "skyblue", 
+                                  "seagreen4", "chartreuse3",  "darkolivegreen2",
+                                  "grey60",
+                                  "darkmagenta", "plum",
+                                  "deeppink3", 'hotpink', "red", "lightpink1", 
+                                  "darkorange", "gold", "gold3", "black" )
                 )
     colors = colfunc(NROW(m_formados_group))
     
@@ -432,13 +352,13 @@ server <- function(input, output, session) {
     icons = rep("male", N_PERIODOS)
     
     series = m_formados_group$PERIODO_EVASAO
-    n = m_formados_group$N %>% sort(decreasing = TRUE)
+    n = m_formados_group$total
     
     title_text = paste("Quantidade de alunos formados <i>através dos anos</i>")
 
     hciconarray(series, n, icons = icons, size = 2.5) %>%
       hc_title(text = title_text, style = list(fontSize = "14px"), align = "left") %>%
-      hc_legend(align = "left", verticalAlign = "top", layout = "vertical", y = 30) %>%
+      hc_legend(align = "left", verticalAlign = "top", layout = "vertical", y = 45, x = -10) %>%
       hc_colors(colors)
     
   })
